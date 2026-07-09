@@ -21,7 +21,8 @@ class Trainer():
         self.start_epoch = start_epoch
         self.num_epochs = num_epochs
         self.is_debug = is_debug
-
+        self.patience = 10      # Stop after 10 epochs without improvement
+        self.counter = 0
         self.cur_epoch = start_epoch
         self.best_mae = sys.float_info.max
         self.logger = logger
@@ -39,6 +40,18 @@ class Trainer():
 
             train_loss, train_mae = self._train()
             val_loss, val_mae = self._valid()
+            
+            if val_mae < self.best_mae:
+             self.counter = 0
+             self._save_best_model(val_mae)
+           else:
+            self.counter += 1
+             self.logger.append(
+               f"No improvement for {self.counter}/{self.patience} epochs.")
+
+            if self.counter >= self.patience:
+              self.logger.append("Early stopping triggered!")
+              break
 
             self.logger.append(
                 f"Epoch {epoch + 1} Summary | "
