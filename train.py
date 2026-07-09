@@ -34,10 +34,9 @@ def load_state_dict(model_dir, is_multi_gpu):
 
     return state
 
-
 def build_model(model_name):
-
-    if model_name == "resnet50":
+    if model_name= 
+    elif model_name == "resnet50":
 
         try:
             weights = models.ResNet50_Weights.IMAGENET1K_V2
@@ -63,6 +62,7 @@ def build_model(model_name):
     model.fc = nn.Linear(model.fc.in_features, 1)
 
     return model
+
 
 
 def main(args):
@@ -278,16 +278,18 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-m",
-        "--model",
-        default="resnet50",
-        choices=[
-            "resnet50",
-            "resnet50-cbam",
-            "resnet101"
-        ],
-        help="Model architecture"
-    )
+    "-m",
+    "--model",
+    default="resnet34-cbam",
+    choices=[
+        "resnet18-cbam",
+        "resnet34-cbam",
+        "resnet50-cbam",
+        "resnet101-cbam",
+        "resnet152-cbam"
+    ],
+    help="CBAM ResNet architecture"
+)
 
     parser.add_argument(
         "--batch_size",
