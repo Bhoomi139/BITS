@@ -124,7 +124,7 @@ if __name__ == '__main__':
                          type=str, help='validation file')
     parser.add_argument('-m', '--model', default='resnet50',
                          type=str, help='model type')
-    parser.add_argument('--batch_size', default=12,
+    parser.add_argument('--batch_size', defaul='32',
                          type=int, help='model train batch size')
     parser.add_argument('--display', action='store_true', dest='display',
                         help='Use TensorboardX to Display')
