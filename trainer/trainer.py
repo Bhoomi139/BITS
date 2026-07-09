@@ -47,16 +47,6 @@ class Trainer():
                 f"Val Loss: {val_loss:.4f} | "
                 f"Val MAE: {val_mae:.4f}"
             )
-
-            print(
-                f"Train Loss: {train_loss:.4f} | "
-                f"Train MAE: {train_mae:.4f}"
-            )
-            print(
-                f"Val Loss: {val_loss:.4f} | "
-                f"Val MAE: {val_mae:.4f}"
-            )
-
             self._save_best_model(val_mae)
 
             self.lr_schedule.step()
