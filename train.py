@@ -97,7 +97,7 @@ def main(args):
     start_epoch = 0
     num_epochs  = 90
     
-    my_trainer = Trainer(my_model, args.model, loss_fn, optimizer, lr_schedule, 500, is_use_cuda, train_dataloaders, \
+    my_trainer = Trainer(my_model, args.model, loss_fn, optimizer, lr_schedule, 50, is_use_cuda, train_dataloaders, \
                         val_dataloaders, None, start_epoch, num_epochs, args.debug, logger, writer)
     print("Starting Training")
     my_trainer.fit()
