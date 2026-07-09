@@ -63,8 +63,8 @@ def main(args):
                           transform=data_transforms['val'])
     print(f"Training images:{len(train_datasets)}")
     print(f"Validation images:{len(val_datasets)}")
-    train_dataloaders = torch.utils.data.DataLoader(train_datasets, batch_size=args.batch_size*len(gpus), shuffle=True, num_workers=4)
-    val_dataloaders   = torch.utils.data.DataLoader(val_datasets, batch_size=1024, shuffle=False, num_workers=4)
+    train_dataloaders = torch.utils.data.DataLoader(train_datasets, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    val_dataloaders   = torch.utils.data.DataLoader(val_datasets, batch_size=256, shuffle=False, num_workers=4)
 
     if args.debug:
         x, y =next(iter(train_dataloaders))
