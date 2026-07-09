@@ -200,19 +200,19 @@ def main(args):
         nn.SmoothL1Loss(beta=1.0)
     ]
 
-    # 1. Separate the parameters into groups
     backbone_params = []
     new_layers_params = []
 
     for name, param in model.named_parameters():
-        if 'cbam' in name or 'fc' in name: 
+        if '.ca.' in name or '.sa.' in name or 'fc' in name: 
             new_layers_params.append(param)
         else:
             backbone_params.append(param)
 
+    # 2. Assign different learning rates per parameter group
     optimizer = optim.AdamW([
-        {'params': backbone_params, 'lr': 3e-5}, 
-        {'params': new_layers_params, 'lr': 1e-3} 
+        {'params': backbone_params, 'lr': 3e-5},  # Gentle LR for pretrained ResNet
+        {'params': new_layers_params, 'lr': 1e-3} # Faster LR for new Attention & Head
     ], weight_decay=1e-4)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
