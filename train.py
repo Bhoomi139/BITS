@@ -211,7 +211,7 @@ def main(args):
 
     # 2. Assign different learning rates per parameter group
     optimizer = optim.AdamW([
-        {'params': backbone_params, 'lr': 3e-5},  # Gentle LR for pretrained ResNet
+        {'params': backbone_params, 'lr': 1e-5},  # Gentle LR for pretrained ResNet
         {'params': new_layers_params, 'lr': 1e-3} # Faster LR for new Attention & Head
     ], weight_decay=1e-4)
 
