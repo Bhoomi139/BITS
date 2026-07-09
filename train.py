@@ -187,15 +187,17 @@ def main(args):
 
     optimizer = optim.Adam(
         model.parameters(),
-        lr=1e-4,
-        weight_decay=1e-5
+        lr=5e-5,
+        weight_decay=1e-4
     )
 
-    scheduler = lr_scheduler.MultiStepLR(
-        optimizer,
-        milestones=[40, 70],
-        gamma=0.1
-    )
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer,
+    mode='min',
+    factor=0.5,
+    patience=3,
+    verbose=True
+)
 
     start_epoch = 0
     num_epochs = 100
