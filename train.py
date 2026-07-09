@@ -200,9 +200,9 @@ def main(args):
         nn.SmoothL1Loss(beta=1.0)
     ]
 
-    optimizer = optim.Adam(
+    optimizer = optim.AdamW(
         model.parameters(),
-        lr=5e-5,
+        lr=3e-5,
         weight_decay=1e-4
     )
 
@@ -210,7 +210,7 @@ def main(args):
     optimizer,
     mode='min',
     factor=0.5,
-    patience=3,
+    patience=5,
     min_lr=1e-7
 )
 
