@@ -219,19 +219,21 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--weights",
-        default="./checkpoint/resnet50/best_model.ckpt",
+        default="./checkpoint/resnet34-cbam/best_model.ckpt"",
         type=str
     )
 
     parser.add_argument(
-        "--model",
-        default="resnet50",
-        choices=[
-            "resnet50",
-            "resnet50-cbam",
-            "resnet101"
-        ]
-    )
+    "--model",
+    default="resnet34-cbam",
+    choices=[
+        "resnet18-cbam",
+        "resnet34-cbam",
+        "resnet50-cbam",
+        "resnet101-cbam",
+        "resnet152-cbam"
+    ]
+)
 
     parser.add_argument(
         "--batch_size",
