@@ -66,11 +66,9 @@ def build_model(model_name):
 
 
 def main(args):
-
-    print("=" * 60)
+    
     print("Starting Training")
-    print("=" * 60)
-
+    
     os.makedirs("./logs", exist_ok=True)
     os.makedirs("./checkpoint", exist_ok=True)
     os.makedirs("./runs", exist_ok=True)
@@ -200,7 +198,7 @@ def main(args):
     )
 
     start_epoch = 0
-    num_epochs = 30
+    num_epochs = 100
 
     print("Optimizer : Adam")
     print(f"Loss Function : {loss_fn[0].__class__.__name__}")
