@@ -1,32 +1,38 @@
-# CBAM.PyTorch
-Non-official implement of Paper：CBAM: Convolutional Block Attention Module
+# Apparent Age Estimation using ResNet34-CBAM
 
-## Introduction
-The codes are [PyTorch](https://pytorch.org/) re-implement version for paper: CBAM: Convolutional Block Attention Module
+**Author:** Bhoomi Priya
 
-> Woo S, Park J, Lee J Y, et al. CBAM: Convolutional Block Attention Module[J]. 2018. [ECCV2018](http://openaccess.thecvf.com/content_ECCV_2018/papers/Sanghyun_Woo_Convolutional_Block_Attention_ECCV_2018_paper.pdf)
+## Overview
+This repository contains a PyTorch implementation for apparent facial age estimation using the APPA-REAL dataset. The project adapts a pretrained ResNet34 architecture integrated with Convolutional Block Attention Modules (CBAM) for continuous age regression. 
 
-## Structure
+To overcome the severe overfitting risks associated with small datasets (~4k training images), this model utilizes a **differential learning rate strategy**, locking down the pretrained visual features while allowing the attention and regression heads to learn rapidly.
 
-The overview of CBAM. The module has two sequential sub-modules:
-channel and spatial. The intermediate feature map is adaptively refined through
-our module (CBAM) at every convolutional block of deep networks.
+## Dataset
+* **APPA-REAL Dataset:** Contains facial images annotated with real and apparent ages.
+* **Preprocessing:** Images resized to $224 \times 224$, normalized using ImageNet statistics, and augmented (random flips, rotations, and color jittering).
 
-![1](imgs/01.png)
-
-## Requirements
-- Python3
-- PyTorch 0.4.1
-- tensorboardX (optional)
-- torchnet
-- pretrainedmodels (optional)
+## Architecture & Training Strategy
+* **Backbone:** ResNet34 (Pretrained on ImageNet)
+* **Attention:** CBAM (Spatial & Channel Attention) inserted for enhanced facial feature extraction.
+* **Loss Function:** Smooth L1 (Huber) Loss
+* **Optimizer:** AdamW with Weight Decay ($10^{-4}$)
+* **Differential Learning Rates:** * `1e-5` for the ResNet34 backbone (preserves robust feature extractors).
+  * `1e-3` for the CBAM blocks and regression head (encourages rapid adaptation).
+* **Callbacks:** ReduceLROnPlateau and Early Stopping (Patience = 10).
 
 ## Results
-We just test four models in ImageNet-1K, both train set and val set are scaled to 256(minimal side), only use **Mirror** and **RandomResizeCrop** as training data augmentation, during validation, we use center crop to get 224x224 patch.
+Evaluated on a test split of 1,978 unseen images, the model demonstrates highly stable and consistent predictive performance:
 
-### ImageNet-1K
+| Metric | Value |
+| :--- | :--- |
+| **MAE** | 5.6677 years |
+| **RMSE** | 7.9546 years |
+| **MSE** | 63.2763 |
+| **$R^2$ Score** | 0.7974 |
+| **Pearson Correlation** | 0.8975 |
 
-Models         | validation(Top-1) | validation(Top-5) |
--------------  | ----------------- | ----------------- |
-ResNet50       | 74.26             | 91.91             |
-ResNet50-CBAM  | 75.45             | 92.55             |
+## How to Run
+
+**1. Train the model:**
+```bash
+python train.py --data_root ./dataset --model resnet34-cbam --batch_size 32
