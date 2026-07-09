@@ -5,7 +5,6 @@
 ## Overview
 This repository contains a PyTorch implementation for apparent facial age estimation using the APPA-REAL dataset. The project adapts a pretrained ResNet34 architecture integrated with Convolutional Block Attention Modules (CBAM) for continuous age regression. 
 
-To overcome the severe overfitting risks associated with small datasets (~4k training images), this model utilizes a **differential learning rate strategy**, locking down the pretrained visual features while allowing the attention and regression heads to learn rapidly.
 
 ## Dataset
 * **APPA-REAL Dataset:** Contains facial images annotated with real and apparent ages.
