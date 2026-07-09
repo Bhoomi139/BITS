@@ -31,7 +31,6 @@ class Trainer():
         for epoch in range(self.start_epoch, self.num_epochs):
             self.logger.append('Epoch {}/{}'.format(epoch, self.num_epochs - 1))
             self.logger.append('-' * 60)
-            print(f"\nEpoch [{epoch+1}/{self.num_epochs}]")
             self.cur_epoch = epoch
             self.lr_schedule.step()
             if self.is_debug:
