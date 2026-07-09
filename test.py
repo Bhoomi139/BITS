@@ -219,7 +219,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--weights",
-        default="./checkpoint/resnet34-cbam/best_model.ckpt"",
+        default="./checkpoint/resnet34-cbam/best_model.ckpt",
         type=str
     )
 
