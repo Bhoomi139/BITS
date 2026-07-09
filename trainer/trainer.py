@@ -142,7 +142,7 @@ class Trainer:
                     f"({self.counter}/{self.patience})"
                 )
 
-            self.lr_schedule.step()
+            scheduler.step(val_mae)
 
             if self.counter >= self.patience:
 
