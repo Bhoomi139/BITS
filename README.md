@@ -35,3 +35,4 @@ Evaluated on a test split of 1,978 unseen images, the model demonstrates highly 
 **1. Train the model:**
 ```bash
 python train.py --data_root ./dataset --model resnet34-cbam --batch_size 32
+Please create a dataset folder where you keep your dataset to smoothly load the data_loaders
