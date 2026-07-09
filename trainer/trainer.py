@@ -77,15 +77,7 @@ class Trainer():
             self.optimizer.step()
 
             losses.append(loss.item())
-            maes.append(mae.item())       # Notice
-            if 0 == i % self.log_batchs or (i == len(self.train_data_loader) - 1):
-                local_time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-                batch_mean_loss  = np.mean(losses)
-                batch_mean_maes=np.mean(maes)
-                print_str = '[%s]\tTraining Batch[%d/%d]\t Loss: %.4f\t MAE: %.4f\t'           \
-                            % (local_time_str, i, len(self.train_data_loader) - 1, batch_mean_loss, np.mean(maes))
-                self.logger.append(print_str)  
-                
+            maes.append(mae.item())       # Notice        
         if self.writer:
             self.writer.add_scalar(
                 'train/loss',
