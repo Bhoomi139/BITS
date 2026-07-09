@@ -34,35 +34,50 @@ def load_state_dict(model_dir, is_multi_gpu):
 
     return state
 
+
 def build_model(model_name):
-    if model_name= 
-    elif model_name == "resnet50":
 
-        try:
-            weights = models.ResNet50_Weights.IMAGENET1K_V2
-            model = models.resnet50(weights=weights)
-        except:
-            model = models.resnet50(pretrained=True)
+    if model_name == "resnet18-cbam":
 
-    elif model_name == "resnet101":
+        model = resnet_cbam.resnet18_cbam(
+            pretrained=True
+        )
 
-        try:
-            weights = models.ResNet101_Weights.IMAGENET1K_V2
-            model = models.resnet101(weights=weights)
-        except:
-            model = models.resnet101(pretrained=True)
+    elif model_name == "resnet34-cbam":
+
+        model = resnet_cbam.resnet34_cbam(
+            pretrained=True
+        )
 
     elif model_name == "resnet50-cbam":
 
-        model = resnet_cbam.resnet50_cbam(pretrained=True)
+        model = resnet_cbam.resnet50_cbam(
+            pretrained=True
+        )
+
+    elif model_name == "resnet101-cbam":
+
+        model = resnet_cbam.resnet101_cbam(
+            pretrained=True
+        )
+
+    elif model_name == "resnet152-cbam":
+
+        model = resnet_cbam.resnet152_cbam(
+            pretrained=True
+        )
 
     else:
-        raise ValueError("Unknown model {}".format(model_name))
+        raise ValueError(
+            "Unknown model {}".format(model_name)
+        )
 
-    model.fc = nn.Linear(model.fc.in_features, 1)
+    model.fc = nn.Linear(
+        model.fc.in_features,
+        1
+    )
 
     return model
-
 
 
 def main(args):
@@ -277,7 +292,7 @@ if __name__ == "__main__":
         help="Dataset root directory"
     )
 
-    parser.add_argument(
+ parser.add_argument(
     "-m",
     "--model",
     default="resnet34-cbam",
