@@ -1,209 +1,219 @@
 import os
-from collections import OrderedDict
-from PIL import Image
+import time
+import argparse
+import pandas as pd
+import numpy as np
+
 import torch
-import torch.nn as nn 
-import torch.optim as optim
-import torch.nn.functional as F
-from torch.autograd import Variable
-from torch.optim import lr_scheduler
+import torch.nn as nn
 from torchvision import transforms, models
-from model import *
-import pretrainedmodels
+from torch.utils.data import DataLoader
 
-#DATA_ROOT = './datasets/xuelang_round1_test_a_20180709'
-#DATA_ROOT = './datasets/xuelang_round1_test_b'
-DATA_ROOT = './datasets/xuelang_round2_test_a_20180809'
-RESULT_FILE = 'result.csv'
+from sklearn.metrics import (
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score
+)
 
-def test_and_generate_result(epoch_num, model_name='resnet101', img_size=320, is_multi_gpu=False):
-    data_transform = transforms.Compose([
-        transforms.Resize(img_size, Image.ANTIALIAS),
+from scipy.stats import pearsonr
+
+import model.resnet_cbam as resnet_cbam
+from data_loader.dataset import data
+
+
+def build_model(model_name):
+
+    if model_name == "resnet50":
+        try:
+            weights = models.ResNet50_Weights.IMAGENET1K_V2
+            model = models.resnet50(weights=weights)
+        except:
+            model = models.resnet50(pretrained=True)
+
+    elif model_name == "resnet101":
+        try:
+            weights = models.ResNet101_Weights.IMAGENET1K_V2
+            model = models.resnet101(weights=weights)
+        except:
+            model = models.resnet101(pretrained=True)
+
+    elif model_name == "resnet50-cbam":
+        model = resnet_cbam.resnet50_cbam(pretrained=False)
+
+    else:
+        raise ValueError("Unknown model.")
+
+    model.fc = nn.Linear(model.fc.in_features, 1)
+
+    return model
+
+
+def main(args):
+
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() else "cpu"
+    )
+    
+    print("Loading Test Dataset")
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
         transforms.ToTensor(),
-        transforms.Normalize([0.53744068, 0.51462684, 0.52646497], [0.06178288, 0.05989952, 0.0618901])
+        transforms.Normalize(
+            [0.485, 0.456, 0.406],
+            [0.229, 0.224, 0.225]
+        )
     ])
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = '4'
-    is_use_cuda = torch.cuda.is_available()
+    test_dataset = data(
+        image_dir=os.path.join(args.data_root, "test"),
+        csv_file=os.path.join(args.data_root, "gt_avg_test.csv"),
+        transform=transform
+    )
 
-    if  'resnet152' == model_name.split('_')[0]:
-        model_ft = models.resnet152(pretrained=True)
-        my_model = resnet152.MyResNet152(model_ft)
-        del model_ft
-    elif 'resnet50' == model_name.split('_')[0]:
-        model_ft = models.resnet50(pretrained=True)
-        my_model = resnet50.MyResNet50(model_ft)
-        del model_ft
-    elif 'resnet101' == model_name.split('_')[0]:
-        model_ft = models.resnet101(pretrained=True)
-        my_model = resnet101.MyResNet101(model_ft)
-        del model_ft
-    elif 'densenet121' == model_name.split('_')[0]:
-        model_ft = models.densenet121(pretrained=True)
-        my_model = densenet121.MyDenseNet121(model_ft)
-        del model_ft
-    elif 'densenet169' == model_name.split('_')[0]:
-        model_ft = models.densenet169(pretrained=True)
-        my_model = densenet169.MyDenseNet169(model_ft)
-        del model_ft
-    elif 'densenet201' == model_name.split('_')[0]:
-        model_ft = models.densenet201(pretrained=True)
-        my_model = densenet201.MyDenseNet201(model_ft)
-        del model_ft
-    elif 'densenet161' == model_name.split('_')[0]:
-        model_ft = models.densenet161(pretrained=True)
-        my_model = densenet161.MyDenseNet161(model_ft)
-        del model_ft
-    elif 'ranet' == model_name.split('_')[0]:
-        my_model = ranet.ResidualAttentionModel_92()
-    elif 'senet154' == model_name.split('_')[0]:
-        model_ft = pretrainedmodels.models.senet154(num_classes=1000, pretrained='imagenet')
-        my_model = MySENet154(model_ft)
-        del model_ft
-    else:
-        raise ModuleNotFoundError
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=4,
+        pin_memory=True
+    )
 
-    state_dict = torch.load('./checkpoint/' + model_name + '/Models_epoch_' + epoch_num + '.ckpt', map_location=lambda storage, loc: storage.cuda())['state_dict']
-    if is_multi_gpu:
-        new_state_dict = OrderedDict()
-        for k, v in state_dict.items():
-            name = k[7:]       # remove `module.`
-            new_state_dict[name] = v
-        my_model.load_state_dict(new_state_dict)
-    else:
-        my_model.load_state_dict(state_dict)
+    print(f"Test Images : {len(test_dataset)}")
+    print("Loading Model")
+    model = build_model(args.model)
 
-    if is_use_cuda:
-        my_model = my_model.cuda()
-    my_model.eval()
+    checkpoint = torch.load(
+        args.weights,
+        map_location=device
+    )
 
-    with open(os.path.join('checkpoint', model_name, model_name+'_'+str(img_size)+'_'+RESULT_FILE), 'w', encoding='utf-8') as fd:
-        fd.write('filename|defect,probability\n')
-        test_files_list = os.listdir(DATA_ROOT)
-        for _file in test_files_list:
-            file_name = _file
-            if '.jpg' not in file_name:
-                continue
-            file_path = os.path.join(DATA_ROOT, file_name)
-            img_tensor = data_transform(Image.open(file_path).convert('RGB')).unsqueeze(0)
-            if is_use_cuda:
-                img_tensor = Variable(img_tensor.cuda(), volatile=True)
-            output = F.softmax(my_model(img_tensor), dim=1)
-            defect_prob = round(output.data[0, 1], 6)
-            if defect_prob == 0.:
-                defect_prob = 0.000001
-            elif defect_prob == 1.:
-                defect_prob = 0.999999
-            target_str = '%s,%.6f\n' % (file_name, defect_prob)
-            fd.write(target_str)
+    model.load_state_dict(checkpoint["state_dict"])
 
-def test_and_generate_result_round2(epoch_num, model_name='resnet101', img_size=320, is_multi_gpu=False):
-    data_transform = transforms.Compose([
-        transforms.Resize(img_size, Image.ANTIALIAS),
-        transforms.ToTensor(),
-        transforms.Normalize([0.53744068, 0.51462684, 0.52646497], [0.06178288, 0.05989952, 0.0618901])
-    ])
+    model.to(device)
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-    is_use_cuda = torch.cuda.is_available()
+    model.eval()
 
-    if  'resnet152' == model_name.split('_')[0]:
-        model_ft = models.resnet152(pretrained=True)
-        my_model = resnet152.MyResNet152(model_ft)
-        del model_ft
-    elif 'resnet152-r2' == model_name.split('_')[0]:
-        model_ft = models.resnet152(pretrained=True)
-        my_model = resnet152.MyResNet152_Round2(model_ft)
-        del model_ft
-    elif 'resnet152-r2-2o' == model_name.split('_')[0]:
-        model_ft = models.resnet152(pretrained=True)
-        my_model = resnet152.MyResNet152_Round2_2out(model_ft)
-        del model_ft
-    elif 'resnet152-r2-2o-gmp' == model_name.split('_')[0]:
-        model_ft = models.resnet152(pretrained=True)
-        my_model = resnet152.MyResNet152_Round2_2out_GMP(model_ft)
-        del model_ft
-    elif 'resnet152-r2-hm-r1' == model_name.split('_')[0]:
-        model_ft = models.resnet152(pretrained=True)
-        my_model = resnet152.MyResNet152_Round2_HM_round1(model_ft)
-        del model_ft
-    elif 'resnet50' == model_name.split('_')[0]:
-        model_ft = models.resnet50(pretrained=True)
-        my_model = resnet50.MyResNet50(model_ft)
-        del model_ft
-    elif 'resnet101' == model_name.split('_')[0]:
-        model_ft = models.resnet101(pretrained=True)
-        my_model = resnet101.MyResNet101(model_ft)
-        del model_ft
-    elif 'densenet121' == model_name.split('_')[0]:
-        model_ft = models.densenet121(pretrained=True)
-        my_model = densenet121.MyDenseNet121(model_ft)
-        del model_ft
-    elif 'densenet169' == model_name.split('_')[0]:
-        model_ft = models.densenet169(pretrained=True)
-        my_model = densenet169.MyDenseNet169(model_ft)
-        del model_ft
-    elif 'densenet201' == model_name.split('_')[0]:
-        model_ft = models.densenet201(pretrained=True)
-        my_model = densenet201.MyDenseNet201(model_ft)
-        del model_ft
-    elif 'densenet161' == model_name.split('_')[0]:
-        model_ft = models.densenet161(pretrained=True)
-        my_model = densenet161.MyDenseNet161(model_ft)
-        del model_ft
-    elif 'ranet' == model_name.split('_')[0]:
-        my_model = ranet.ResidualAttentionModel_92()
-    elif 'senet154' == model_name.split('_')[0]:
-        model_ft = pretrainedmodels.models.senet154(num_classes=1000, pretrained='imagenet')
-        my_model = MySENet154(model_ft)
-        del model_ft
-    else:
-        raise ModuleNotFoundError
+    criterion = nn.SmoothL1Loss(beta=1.0)
 
-    state_dict = torch.load('./checkpoint/' + model_name + '/Models_epoch_' + epoch_num + '.ckpt', map_location=lambda storage, loc: storage.cuda())['state_dict']
-    if is_multi_gpu:
-        new_state_dict = OrderedDict()
-        for k, v in state_dict.items():
-            name = k[7:]       # remove `module.`
-            new_state_dict[name] = v
-        my_model.load_state_dict(new_state_dict)
-    else:
-        my_model.load_state_dict(state_dict)
+    predictions = []
+    targets = []
 
-    if is_use_cuda:
-        my_model = my_model.cuda()
-    my_model.eval()
+    running_loss = 0.0
+    total_samples = 0
 
-    with open(os.path.join('checkpoint', model_name, model_name+'_'+str(img_size)+'_'+RESULT_FILE), 'w', encoding='utf-8') as fd:
-        fd.write('filename|defect,probability\n')
-        test_files_list = os.listdir(DATA_ROOT)
-        for _file in test_files_list:
-            file_name = _file
-            if '.jpg' not in file_name:
-                continue
-            file_path = os.path.join(DATA_ROOT, file_name)
-            img_tensor = data_transform(Image.open(file_path).convert('RGB')).unsqueeze(0)
-            if is_use_cuda:
-                img_tensor = Variable(img_tensor.cuda(), volatile=True)
-            _, output, _ = my_model(img_tensor)
-            #output = my_model(img_tensor)
-            output = F.softmax(output, dim=1)
-            for k in range(11):
-                defect_prob = round(output.data[0, k], 6)
-                if defect_prob == 0.:
-                    defect_prob = 0.000001
-                elif defect_prob == 1.:
-                    defect_prob = 0.999999
-                target_str = '%s,%.6f\n' % (file_name + '|' + ('norm' if 0 == k else 'defect_'+str(k)), defect_prob)
-                fd.write(target_str)
+    start = time.time()
 
-if __name__ == '__main__':
-    #test_and_generate_result('10', 'resnet152_2018073100', 416, True)
-    #test_and_generate_result('2', 'resnet50_2018072500', 416, True)
-    #test_and_generate_result('7','resnet101_2018072600', 416, True)
-    #test_and_generate_result_round2('14','resnet152-r2-2o-gmp_2018081600', 600, True)
-    #test_and_generate_result_round2('14', 'resnet152-r2-2o_2018081300', 600, True)
-    #test_and_generate_result('12', 'densenet161_new_stra', 352, True)
-    #test_and_generate_result('25', 'ranet_2018072400', 416, True)
-    #test_and_generate_result('8', 'senet154_2018072500', 416, True)
-    test_and_generate_result_round2('9','resnet152-r2-hm-r1_2018082000', 576, True)
+    with torch.no_grad():
+
+        for images, labels in test_loader:
+
+            images = images.to(device)
+            labels = labels.to(device).float().squeeze()
+
+            outputs = model(images).squeeze(1)
+
+            loss = criterion(outputs, labels)
+
+            batch_size = images.size(0)
+
+            running_loss += loss.item() * batch_size
+            total_samples += batch_size
+
+            predictions.extend(
+                outputs.cpu().numpy()
+            )
+
+            targets.extend(
+                labels.cpu().numpy()
+            )
+
+    inference_time = time.time() - start
+
+    predictions = np.array(predictions)
+    targets = np.array(targets)
+
+    test_loss = running_loss / total_samples
+
+    mae = mean_absolute_error(
+        targets,
+        predictions
+    )
+
+    mse = mean_squared_error(
+        targets,
+        predictions
+    )
+
+    rmse = np.sqrt(mse)
+
+    r2 = r2_score(
+        targets,
+        predictions
+    )
+
+    corr, _ = pearsonr(
+        targets,
+        predictions
+    )
+
+    print("\n")
+    print("Test Results")
+    print(f"Test Loss (Huber): {test_loss:.4f}")
+    print(f"MAE              : {mae:.4f}")
+    print(f"MSE              : {mse:.4f}")
+    print(f"RMSE             : {rmse:.4f}")
+    print(f"R2 Score         : {r2:.4f}")
+    print(f"Pearson Corr.    : {corr:.4f}")
+    print(f"Test Images      : {len(test_dataset)}")
+    print(f"Inference Time   : {inference_time:.2f} sec")
+
+    os.makedirs("results", exist_ok=True)
+
+    df = pd.DataFrame({
+        "GroundTruth": targets,
+        "Prediction": predictions
+    })
+
+    df.to_csv(
+        "results/predictions.csv",
+        index=False
+    )
+
+    print("Predictions saved to results/predictions.csv")
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--data_root",
+        default="./dataset",
+        type=str
+    )
+
+    parser.add_argument(
+        "--weights",
+        default="./checkpoint/resnet50/best_model.ckpt",
+        type=str
+    )
+
+    parser.add_argument(
+        "--model",
+        default="resnet50",
+        choices=[
+            "resnet50",
+            "resnet50-cbam",
+            "resnet101"
+        ]
+    )
+
+    parser.add_argument(
+        "--batch_size",
+        default=128,
+        type=int
+    )
+
+    args = parser.parse_args()
+
+    main(args) 
