@@ -292,7 +292,7 @@ if __name__ == "__main__":
         help="Dataset root directory"
     )
 
- parser.add_argument(
+    parser.add_argument(
     "-m",
     "--model",
     default="resnet34-cbam",
